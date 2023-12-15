@@ -32,7 +32,7 @@ def update_git_repo(file_path, data):
     # Pull latest changes
     repo.remotes.origin.pull()
 
-    # Check for uniqueness and append to file add
+    # Check for uniqueness and append to file
     with open(file_path, 'a') as file:
         for link in data:
             if link not in repo.git.show('HEAD:' + file_path):
@@ -61,21 +61,29 @@ def main():
         "expansions": "author_id"
     }
     response = requests.get(url, headers=headers, params=params)
-    tweets = response.json()['data']
 
-    # Extract YouTube links from relevant tweets
-    youtube_links = []
-    for tweet in tweets:
-        if tweet['text'].endswith('#music'):
-            youtube_links.extend(extract_youtube_links(tweet))
+    # Print the entire JSON response for debugging
+    print(response.json())
 
-    # Update Git repository with unique links
-    if youtube_links:
-        git_file_path = 'Music.md'
-        update_git_repo(git_file_path, youtube_links)
-        print("YouTube links updated successfully.")
+    # Check if 'data' key is present in the response
+    if 'data' in response.json():
+        tweets = response.json()['data']
+
+        # Extract YouTube links from relevant tweets
+        youtube_links = []
+        for tweet in tweets:
+            if tweet['text'].endswith('#music'):
+                youtube_links.extend(extract_youtube_links(tweet))
+
+        # Update Git repository with unique links
+        if youtube_links:
+            git_file_path = 'Music.md'
+            update_git_repo(git_file_path, youtube_links)
+            print("YouTube links updated successfully.")
+        else:
+            print("No relevant tweets found.")
     else:
-        print("No relevant tweets found.")
+        print("Error: 'data' key not present in the response.")
 
 if __name__ == "__main__":
     main()
