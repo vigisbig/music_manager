@@ -1,89 +1,68 @@
-import os
-import requests
 import tweepy
+import re
 from git import Repo
 
-# Twitter API credentials
-twitter_api_key = '3P3ZCSR0R7fOgIBp954wTz4sX'
-twitter_api_secret = 'N6UHu4z8RFgBGXsd0QcXD5jiRor2Bu1Bd6tuPJ6JSbwfKBZ4Bl'
-twitter_access_token = '84854703-Ucow9TlPRQmEWMv2QKDBZI90lZMIymtbiksndof8O'
-twitter_access_token_secret = '7q9DpjgUlRfekJBkiwRAJVoOthnloNuPZSfCnVu2JkQ53'
+# Replace these with your own Twitter API credentials
+bearer_token = "AAAAAAAAAAAAAAAAAAAAAO7EnQEAAAAA5eazEhkX%2FQCV%2BKlOFFS%2B4i2V8Ss%3DDknHnOiD9L8L2Pmgp5EtRL6MOuiIQ78n6iQpqQNkJcALFfkuGR"
+client = tweepy.Client(bearer_token=bearer_token)
 
-# Twitter API v2 Bearer Token
-bearer_token = 'AAAAAAAAAAAAAAAAAAAAAO7EnQEAAAAACsOG0QE74tQsqBvFM6YFWIYP8Q8%3DyFPPIJ9cz4JqweUOTiJXo3145sN7OQNV9aTgUailGFX0NrJl8j'
+# Git repository information (assuming you already have a markdown file)
+repo_path = "D:\Fintools\music_manager"
+file_name = "Music.md"
 
-# Git repository information
-git_repo_path = 'D:/Fintools/music_manager'
-git_repo_url = 'https://github.com/vigisbig/music_manager.git'
+def find_music_links(tweets):
+  """
+  Finds unique YouTube links from tweets ending with #music hashtag.
 
-# Function to extract YouTube links from tweets
-def extract_youtube_links(tweet):
-    urls = []
-    for url in tweet['entities']['urls']:
-        expanded_url = url['expanded_url']
-        if 'youtube.com' in expanded_url or 'youtu.be' in expanded_url:
-            urls.append(expanded_url)
-    return urls
+  Args:
+    tweets: A list of tweet objects.
 
-# Function to update Git repository
-def update_git_repo(file_path, data):
-    repo = Repo(git_repo_path)
-    
-    # Pull latest changes
-    repo.remotes.origin.pull()
+  Returns:
+    A set of unique YouTube links.
+  """
+  links = set()
+  for tweet in tweets:
+    text = tweet.text.lower()
+    if text.endswith("#music"):
+      # Extract Youtube link using regular expression
+      match = re.search(r"https?://(?:www\.)?youtu(?:\.be|be\.com)/(.+)$", text)
+      if match:
+        link = f"[Watch this music video!]({match.group(1)})"
+        links.add(link)
+  return links
 
-    # Check for uniqueness and append to file
-    with open(file_path, 'a') as file:
-        for link in data:
-            if link not in repo.git.show('HEAD:' + file_path):
-                file.write(f"{link}\n")
+def update_markdown_file(links):
+  """
+  Appends unique YouTube links to a markdown file in a git repository.
 
-    # Commit and push changes
-    repo.index.add([file_path])
-    repo.index.commit("Update YouTube links")
-    repo.remotes.origin.push()
+  Args:
+    links: A set of unique YouTube links.
+  """
+  with open(f"{repo_path}/{file_name}", "a+") as f:
+    for link in links:
+      f.write(f"\n* {link}")
+    f.flush()
 
-# Main function
+  # Commit changes to git repository
+  repo = Repo(repo_path)
+  repo.index.add(file_name)
+  repo.index.commit(f"Adding new music links from tweets")
+  origin = repo.remote("origin")
+  origin.push()
+
 def main():
-    # Authenticate with Twitter API v2
-    auth = tweepy.OAuthHandler(twitter_api_key, twitter_api_secret)
-    auth.set_access_token(twitter_access_token, twitter_access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True)
+  # Get last 50 tweets from your account
+  tweets = client.get_user_tweets(client.me().id, max_results=50)
 
-    # Fetch tweets with the #music hashtag using Twitter API directly
-    url = "https://api.twitter.com/2/tweets"
-    headers = {
-        "Authorization": f"Bearer {bearer_token}"
-    }
-    params = {
-        "tweet.fields": "entities",
-        "user.fields": "username",
-        "expansions": "author_id"
-    }
-    response = requests.get(url, headers=headers, params=params)
+  # Find unique YouTube links from music tweets
+  unique_links = find_music_links(tweets)
 
-    # Print the entire JSON response for debugging
-    print(response.json())
-
-    # Check if 'data' key is present in the response
-    if 'data' in response.json():
-        tweets = response.json()['data']
-
-        # Extract YouTube links from relevant tweets
-        youtube_links = []
-        for tweet in tweets:
-            if tweet['text'].endswith('#music'):
-                youtube_links.extend(extract_youtube_links(tweet))
-
-        # Update Git repository with unique links
-        if youtube_links:
-            git_file_path = 'Music.md'
-            update_git_repo(git_file_path, youtube_links)
-            print("YouTube links updated successfully.")
-        else:
-            print("No relevant tweets found.")
-    else:
-        print("Error: 'data' key not present in the response.")
+  # Update markdown file only if there are unique links
+  if unique_links:
+    update_markdown_file(unique_links)
+    print(f"Successfully added {len(unique_links)} unique music links to {file_name}")
+  else:
+    print("No new music links found in your tweets.")
 
 if __name__ == "__main__":
-    main()
+  main()
