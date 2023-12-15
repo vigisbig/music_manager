@@ -13,7 +13,7 @@ twitter_access_token_secret = '7q9DpjgUlRfekJBkiwRAJVoOthnloNuPZSfCnVu2JkQ53'
 bearer_token = 'AAAAAAAAAAAAAAAAAAAAAO7EnQEAAAAACsOG0QE74tQsqBvFM6YFWIYP8Q8%3DyFPPIJ9cz4JqweUOTiJXo3145sN7OQNV9aTgUailGFX0NrJl8j'
 
 # Git repository information
-git_repo_path = '/path/to/your/git/repo'
+git_repo_path = 'D:/Fintools/music_manager'
 git_repo_url = 'https://github.com/vigisbig/music_manager.git'
 
 # Function to extract YouTube links from tweets
@@ -32,7 +32,7 @@ def update_git_repo(file_path, data):
     # Pull latest changes
     repo.remotes.origin.pull()
 
-    # Check for uniqueness and append to file
+    # Check for uniqueness and append to file add
     with open(file_path, 'a') as file:
         for link in data:
             if link not in repo.git.show('HEAD:' + file_path):
@@ -71,7 +71,7 @@ def main():
 
     # Update Git repository with unique links
     if youtube_links:
-        git_file_path = 'youtube_links.md'
+        git_file_path = 'Music.md'
         update_git_repo(git_file_path, youtube_links)
         print("YouTube links updated successfully.")
     else:
